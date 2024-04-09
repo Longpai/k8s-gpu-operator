@@ -1,0 +1,18 @@
+domain: xdxct.com
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: k8s-gpu-operator
+repo: github.com/chen-mao/k8s-gpu-operator.git
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: xdxct.com
+  kind: GPUCluster
+  path: github.com/chen-mao/k8s-gpu-operator.git/api/v1alpha1
+  version: v1alpha1
+version: "3"
