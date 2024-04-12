@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -42,6 +43,7 @@ type GPUClusterReconciler struct {
 //+kubebuilder:rbac:groups=xdxct.com,resources=gpuclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=xdxct.com,resources=gpuclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=xdxct.com,resources=gpuclusters/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -72,7 +74,7 @@ func (r *GPUClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	err = gpuClusterCtrl.init(ctx, &gpuObjects)
+	err = gpuClusterCtrl.init(ctx, r, &gpuObjects)
 	if err != nil {
 		err = fmt.Errorf("failed to initialize ClusterPolicy controller: %v", err)
 		return ctrl.Result{}, err
@@ -80,9 +82,19 @@ func (r *GPUClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// loop: deploy componentes
 	for {
-		gpuClusterCtrl.step()
+		status, err := gpuClusterCtrl.step()
+		if err != nil {
+			return ctrl.Result{
+				RequeueAfter: time.Second * 5,
+			}, nil
+		}
+		if status == gpuv1alpha1.NotReady {
+			fmt.Println("Components Not Ready")
+		} else {
+			break
+		}
 	}
-	// return ctrl.Result{}, nil
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

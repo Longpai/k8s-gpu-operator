@@ -3,30 +3,53 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	gpuv1alpha1 "github.com/chen-mao/k8s-gpu-operator.git/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // controlFunc: 保存了组件的执行函数
 // controls: 保存各个组件
 type GPUClusterController struct {
+	client client.Client
+
+	ctx       context.Context
 	singleton *gpuv1alpha1.GPUCluster
-	resources []Resouces
-	controls  []controlFunc
-	namespace string
+	schema    *runtime.Scheme
+
+	resources      []Resouces
+	controls       []controlFunc
+	componentNames []string
+	namespace      string
 }
 
 func addState(c *GPUClusterController, path string) {
 	res, ctrlFunc := addRescourcesControls(path)
 	c.resources = append(c.resources, res)
 	c.controls = append(c.controls, ctrlFunc)
-	// fmt.Println(c.resources)
+	c.componentNames = append(c.componentNames, filepath.Base(path))
+
+	fmt.Println(c.componentNames)
 	fmt.Println(c.controls)
 }
 
-func (c *GPUClusterController) init(ctx context.Context, gpuCluster *gpuv1alpha1.GPUCluster) error {
+func (c *GPUClusterController) init(ctx context.Context, reconciler *GPUClusterReconciler, gpuCluster *gpuv1alpha1.GPUCluster) error {
+	c.ctx = ctx
+	c.client = reconciler.Client
+	c.schema = reconciler.Scheme
 	c.singleton = gpuCluster
+	if len(c.controls) == 0 {
+		gpuClusterCtrl.namespace = os.Getenv("OPERATOR_NAMESPACE")
 
+		if gpuClusterCtrl.namespace == "" {
+			// 任何操作都是在namespace下，如果没有namespace, 则退出循环
+			fmt.Println("namespace environment variable not set, exit.")
+			os.Exit(1)
+		}
+	}
 	addState(c, "/opt/k8s-gpu-operator/device-plugin")
 	return nil
 }
@@ -47,4 +70,15 @@ func (c *GPUClusterController) step() (gpuv1alpha1.State, error) {
 	}
 	// c.idx++
 	return result, nil
+}
+
+func (c *GPUClusterController) isStateEnabled(name string) bool {
+	GPUClusterSpec := &c.singleton.Spec
+	switch name {
+	case "device-plugin":
+		return GPUClusterSpec.DevicePlugin.IsEnabled()
+	default:
+		fmt.Println("invalid component name")
+		return false
+	}
 }

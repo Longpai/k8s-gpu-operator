@@ -29,6 +29,12 @@ const (
 
 	// Ready indicates all components of GPUCluster are ready
 	Ready State = "ready"
+
+	// notReady indicates the components of GPUCluster are notReady
+	NotReady State = "notReady"
+
+	// the components is disabled
+	Disabled State = "disabled"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -143,4 +149,11 @@ func init() {
 func (c *GPUCluster) SetStatus(s State, ns string) {
 	c.Status.State = s
 	c.Status.Namespace = ns
+}
+
+func (p *DevicePluginSpec) IsEnabled() bool {
+	if p.Enabled == nil {
+		return true
+	}
+	return *p.Enabled
 }
