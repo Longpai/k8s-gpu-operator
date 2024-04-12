@@ -1,12 +1,6 @@
 apiVersion: xdxct.com/v1alpha1
 kind: GPUCluster
 metadata:
-  labels:
-    app.kubernetes.io/name: gpucluster
-    app.kubernetes.io/instance: gpucluster-sample
-    app.kubernetes.io/part-of: k8s-gpu-operator
-    app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: k8s-gpu-operator
   name: gpucluster-sample
 spec:
   devicePlugin:

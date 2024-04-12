@@ -18,18 +18,24 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	xdxctcomv1alpha1 "github.com/chen-mao/k8s-gpu-operator.git/api/v1alpha1"
+	gpuv1alpha1 "github.com/chen-mao/k8s-gpu-operator.git/api/v1alpha1"
 )
+
+var gpuClusterCtrl GPUClusterController
 
 // GPUClusterReconciler reconciles a GPUCluster object
 type GPUClusterReconciler struct {
 	client.Client
+
+	// Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
@@ -49,14 +55,39 @@ type GPUClusterReconciler struct {
 func (r *GPUClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	gpuObjects := gpuv1alpha1.GPUCluster{}
+	err := r.Client.Get(ctx, req.NamespacedName, &gpuObjects)
+	if err != nil {
+		err = fmt.Errorf("failed to get gpucluster object: %v", err)
+		if client.IgnoreNotFound(err) != nil {
+			// cr not found and don't requeue
+			return reconcile.Result{}, nil
+		}
+		// the requeue request
+		return reconcile.Result{}, err
+	}
+	// Differ between present instances and store instances.
+	if gpuClusterCtrl.singleton != nil && gpuClusterCtrl.singleton.ObjectMeta.Name != gpuObjects.ObjectMeta.Name {
+		gpuObjects.SetStatus(gpuv1alpha1.Ignored, gpuClusterCtrl.namespace)
+		return ctrl.Result{}, err
+	}
 
-	return ctrl.Result{}, nil
+	err = gpuClusterCtrl.init(ctx, &gpuObjects)
+	if err != nil {
+		err = fmt.Errorf("failed to initialize ClusterPolicy controller: %v", err)
+		return ctrl.Result{}, err
+	}
+
+	// loop: deploy componentes
+	for {
+		gpuClusterCtrl.step()
+	}
+	// return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GPUClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&xdxctcomv1alpha1.GPUCluster{}).
+		For(&gpuv1alpha1.GPUCluster{}).
 		Complete(r)
 }

@@ -17,7 +17,18 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+type State string
+
+const (
+	// Ignored indicates duplicate gpucluster instances and rest are ignored.
+	Ignored State = "ignored"
+
+	// Ready indicates all components of GPUCluster are ready
+	Ready State = "ready"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -28,6 +39,7 @@ type GPUClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// DevicePlugin component spec
 	DevicePlugin DevicePluginSpec `json:"devicePlugin"`
 }
 
@@ -37,6 +49,9 @@ type GPUClusterStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Namespace string `json:"namespace,omitempty"`
+
+	// status of gpucluster
+	State State `json:"state,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,9 +76,71 @@ type GPUClusterList struct {
 }
 
 type DevicePluginSpec struct {
+	// Enabled indicates whether to deploy xdxct-device-plugin
 	Enabled *bool `json:"enabled,omitempty"`
+
+	// Xdxct Device-plugin repository
+	Repository string `json:"repository,omitempty"`
+
+	// Xdxct Device-plugin image
+	Image string `json:"image,omitempty"`
+
+	// Xdxct Device-plugin image tag
+	Version string `json:"version,omitempty"`
+
+	// Device-plugin image pull policy
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+
+	// Device-plugin image pull secrets
+	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
+
+	// Optional: List of arguments
+	Args []string `json:"args,omitempty"`
+
+	// Optional: List of environmemt variables
+	Env []EnvVar `json:"env,omitempty"`
+
+	// Optional: resources requests and limits for device plugin pod
+	Resources *ResourceRequirements `json:"resources,omitempty"`
+
+	// Optional: Configmap for Device-plugin
+	Config *DevicePluginConfig `json:"config,omitempty"`
+}
+
+type EnvVar struct {
+	// Environment name
+	Name string `json:"name"`
+
+	// Environment value
+	Value string `json:"value"`
+}
+
+type ResourceRequirements struct {
+	// Limits describes the maxium amount of compute resource requirements
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	// +optional
+	Limits corev1.ResourceList `json:"limits,omitempty"`
+
+	// Requests describes the minimum amount of compute resources requirements
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	// +optional
+	Requests corev1.ResourceList `json:"requests,omitempty"`
+}
+
+// DevicePluginSpec properties for device plugin deployment
+type DevicePluginConfig struct {
+	// ConfigMap name
+	Name string `json:"name"`
+
+	// Default config for ConfigMap
+	Default string `json:"default"`
 }
 
 func init() {
 	SchemeBuilder.Register(&GPUCluster{}, &GPUClusterList{})
+}
+
+func (c *GPUCluster) SetStatus(s State, ns string) {
+	c.Status.State = s
+	c.Status.Namespace = ns
 }

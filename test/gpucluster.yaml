@@ -1,0 +1,13 @@
+apiVersion: xdxct.com/v1alpha1
+kind: GPUCluster
+metadata:
+  name: operator-sample
+spec:
+  devicePlugin:
+    enabled: true
+    env:
+    - name: "nodeName"
+      value: "worker01"
+    config:
+      name: ""
+      default: ""

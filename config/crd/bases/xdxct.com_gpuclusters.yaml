@@ -1,0 +1,136 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: gpuclusters.xdxct.com
+spec:
+  group: xdxct.com
+  names:
+    kind: GPUCluster
+    listKind: GPUClusterList
+    plural: gpuclusters
+    singular: gpucluster
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: GPUCluster is the Schema for the gpuclusters API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: GPUClusterSpec defines the desired state of GPUCluster
+            properties:
+              devicePlugin:
+                description: DevicePlugin component spec
+                properties:
+                  args:
+                    description: 'Optional: List of arguments'
+                    items:
+                      type: string
+                    type: array
+                  config:
+                    description: 'Optional: Configmap for Device-plugin'
+                    properties:
+                      default:
+                        description: Default config for ConfigMap
+                        type: string
+                      name:
+                        description: ConfigMap name
+                        type: string
+                    required:
+                    - default
+                    - name
+                    type: object
+                  enabled:
+                    description: Enabled indicates whether to deploy xdxct-device-plugin
+                    type: boolean
+                  env:
+                    description: 'Optional: List of environmemt variables'
+                    items:
+                      properties:
+                        name:
+                          description: Environment name
+                          type: string
+                        value:
+                          description: Environment value
+                          type: string
+                      required:
+                      - name
+                      - value
+                      type: object
+                    type: array
+                  image:
+                    description: Xdxct Device-plugin image
+                    type: string
+                  imagePullPolicy:
+                    description: Device-plugin image pull policy
+                    type: string
+                  imagePullSecrets:
+                    description: Device-plugin image pull secrets
+                    items:
+                      type: string
+                    type: array
+                  repository:
+                    description: Xdxct Device-plugin repository
+                    type: string
+                  resources:
+                    description: 'Optional: resources requests and limits for device
+                      plugin pod'
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maxium amount of compute
+                          resource requirements More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources requirements More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                  version:
+                    description: Xdxct Device-plugin image tag
+                    type: string
+                type: object
+            required:
+            - devicePlugin
+            type: object
+          status:
+            description: GPUClusterStatus defines the observed state of GPUCluster
+            properties:
+              namespace:
+                type: string
+              state:
+                description: status of gpucluster
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
