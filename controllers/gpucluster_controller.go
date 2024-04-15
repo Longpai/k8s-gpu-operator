@@ -68,7 +68,7 @@ func (r *GPUClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		// the requeue request
 		return reconcile.Result{}, err
 	}
-	// Differ between present instances and store instances.
+
 	if gpuClusterCtrl.singleton != nil && gpuClusterCtrl.singleton.ObjectMeta.Name != gpuObjects.ObjectMeta.Name {
 		gpuObjects.SetStatus(gpuv1alpha1.Ignored, gpuClusterCtrl.namespace)
 		return ctrl.Result{}, err

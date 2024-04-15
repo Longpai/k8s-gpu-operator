@@ -3,5 +3,10 @@ kind: GPUCluster
 metadata:
   name: gpucluster-sample
 spec:
+  daemonSets: {}
   devicePlugin:
     enabled: true
+    repository: hub.xdxct.com/xdxct-docker
+    image: k8s-device-plugin
+    version: devel
+

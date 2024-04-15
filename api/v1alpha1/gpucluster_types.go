@@ -17,11 +17,16 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+	"os"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type State string
+type Runtime string
 
 const (
 	// Ignored indicates duplicate gpucluster instances and rest are ignored.
@@ -37,6 +42,15 @@ const (
 	Disabled State = "disabled"
 )
 
+const (
+	// Docker runtime
+	Docker Runtime = "docker"
+	// CRIO runtime
+	CRIO Runtime = "crio"
+	// Containerd runtime
+	Containerd Runtime = "containerd"
+)
+
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
@@ -44,6 +58,12 @@ const (
 type GPUClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// Operator defines configurations for cluster
+	Operator OperatorSpec `json:"operator"`
+
+	// Daemonset defines common configuration for all components
+	DaemonSets DaemonSetsSpec `json:"daemonSets"`
 
 	// DevicePlugin component spec
 	DevicePlugin DevicePluginSpec `json:"devicePlugin"`
@@ -79,6 +99,31 @@ type GPUClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []GPUCluster `json:"items"`
+}
+
+// OperatorSpec describes configuration options for the operator
+type OperatorSpec struct {
+	RuntimeClass string `json:"runtimeClass,omitempty"`
+}
+
+// DaemonSetsSpec describe configuration for all daemonsets components
+type DaemonSetsSpec struct {
+	Labels map[string]string `json:"labels,omitempty"`
+
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	UpdateStrategy string `json:"updateStrategy,omitempty"`
+
+	RollingUpdate *RollingUpdateSpec `json:"rollingUpdate,omitempty"`
+
+	PriorityClassName string `json:"priorityClassName,omitempty"`
+}
+
+// RollingUpdateSpec indicates configurations for all daemonset pod
+type RollingUpdateSpec struct {
+	MaxUnavilable string `json:"maxUnavilable,omitempty"`
 }
 
 type DevicePluginSpec struct {
@@ -144,6 +189,57 @@ type DevicePluginConfig struct {
 
 func init() {
 	SchemeBuilder.Register(&GPUCluster{}, &GPUClusterList{})
+}
+
+func imagePath(repoistory string, image string, version string, imagePathEnvName string) (string, error) {
+	// 1. GpuClusterSpec
+	var crdImagePath string
+	if repoistory == "" && version == "" {
+		if image != "" {
+			crdImagePath = image
+		}
+	} else {
+		if strings.HasPrefix(version, "sha256:") {
+			crdImagePath = repoistory + "/" + image + "@" + version
+		} else {
+			crdImagePath = repoistory + "/" + image + ":" + version
+		}
+	}
+	if crdImagePath != "" {
+		return crdImagePath, nil
+	}
+
+	// 2. Env passed to pod
+	envImagePath := os.Getenv(imagePathEnvName)
+	if envImagePath != "" {
+		return envImagePath, nil
+	}
+	return "", fmt.Errorf("empty image path both GpuClusterSpec or Env: %s", imagePathEnvName)
+}
+
+func ImagePath(spec interface{}) (string, error) {
+	switch v := spec.(type) {
+	case *DevicePluginSpec:
+		config := spec.(*DevicePluginSpec)
+		return imagePath(config.Repository, config.Image, config.Version, "DEVICE_PLUGIN_IMAGE")
+	default:
+		return "", fmt.Errorf("invalid type to construct image type path: %v", v)
+	}
+}
+
+func ImagePullPolicy(pullPolicy string) corev1.PullPolicy {
+	var imagePullPolicy corev1.PullPolicy
+	switch pullPolicy {
+	case "Always":
+		imagePullPolicy = corev1.PullAlways
+	case "Never":
+		imagePullPolicy = corev1.PullNever
+	case "IfNotPresent":
+		imagePullPolicy = corev1.PullIfNotPresent
+	default:
+		imagePullPolicy = corev1.PullIfNotPresent
+	}
+	return imagePullPolicy
 }
 
 func (c *GPUCluster) SetStatus(s State, ns string) {

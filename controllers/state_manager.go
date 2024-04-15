@@ -24,6 +24,8 @@ type GPUClusterController struct {
 	controls       []controlFunc
 	componentNames []string
 	namespace      string
+
+	runtime gpuv1alpha1.Runtime
 }
 
 func addState(c *GPUClusterController, path string) {
@@ -43,7 +45,6 @@ func (c *GPUClusterController) init(ctx context.Context, reconciler *GPUClusterR
 	c.singleton = gpuCluster
 	if len(c.controls) == 0 {
 		gpuClusterCtrl.namespace = os.Getenv("OPERATOR_NAMESPACE")
-
 		if gpuClusterCtrl.namespace == "" {
 			// 任何操作都是在namespace下，如果没有namespace, 则退出循环
 			fmt.Println("namespace environment variable not set, exit.")
