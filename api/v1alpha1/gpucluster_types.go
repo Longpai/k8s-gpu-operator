@@ -67,6 +67,9 @@ type GPUClusterSpec struct {
 
 	// DevicePlugin component spec
 	DevicePlugin DevicePluginSpec `json:"devicePlugin"`
+
+	// kubevirt device plugin component spec
+	KubevirtDevicePlugin KubevirtDevicePluginSpec `json:"kubevirtDevicePlugin"`
 }
 
 // GPUClusterStatus defines the observed state of GPUCluster
@@ -187,6 +190,11 @@ type DevicePluginConfig struct {
 	Default string `json:"default"`
 }
 
+type KubevirtDevicePluginSpec struct {
+	// Enabled indicates whether to deploy kubevirt-device-plugin
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
 func init() {
 	SchemeBuilder.Register(&GPUCluster{}, &GPUClusterList{})
 }
@@ -252,4 +260,11 @@ func (p *DevicePluginSpec) IsEnabled() bool {
 		return true
 	}
 	return *p.Enabled
+}
+
+func (k *KubevirtDevicePluginSpec) IsEnabled() bool {
+	if k.Enabled == nil {
+		return true
+	}
+	return *k.Enabled
 }

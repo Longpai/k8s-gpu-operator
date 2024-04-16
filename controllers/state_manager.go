@@ -24,6 +24,7 @@ type GPUClusterController struct {
 	controls       []controlFunc
 	componentNames []string
 	namespace      string
+	index          int
 
 	runtime gpuv1alpha1.Runtime
 }
@@ -43,6 +44,7 @@ func (c *GPUClusterController) init(ctx context.Context, reconciler *GPUClusterR
 	c.client = reconciler.Client
 	c.schema = reconciler.Scheme
 	c.singleton = gpuCluster
+	c.index = 0
 	if len(c.controls) == 0 {
 		gpuClusterCtrl.namespace = os.Getenv("OPERATOR_NAMESPACE")
 		if gpuClusterCtrl.namespace == "" {
@@ -50,15 +52,17 @@ func (c *GPUClusterController) init(ctx context.Context, reconciler *GPUClusterR
 			fmt.Println("namespace environment variable not set, exit.")
 			os.Exit(1)
 		}
+
+		addState(c, "/opt/k8s-gpu-operator/device-plugin")
+		addState(c, "/opt/k8s-gpu-operator/kubevirt-device-plugin")
 	}
-	addState(c, "/opt/k8s-gpu-operator/device-plugin")
+
 	return nil
 }
 
 func (c *GPUClusterController) step() (gpuv1alpha1.State, error) {
 	result := gpuv1alpha1.Ready
-
-	for _, fs := range c.controls[0] {
+	for _, fs := range c.controls[c.index] {
 		stat, err := fs(*c)
 		if err != nil {
 			return stat, err
@@ -69,7 +73,8 @@ func (c *GPUClusterController) step() (gpuv1alpha1.State, error) {
 			result = stat
 		}
 	}
-	// c.idx++
+	// install the next component
+	c.index++
 	return result, nil
 }
 
@@ -78,6 +83,8 @@ func (c *GPUClusterController) isStateEnabled(name string) bool {
 	switch name {
 	case "device-plugin":
 		return GPUClusterSpec.DevicePlugin.IsEnabled()
+	case "kubevirt-device-plugin":
+		return GPUClusterSpec.KubevirtDevicePlugin.IsEnabled()
 	default:
 		fmt.Println("invalid component name")
 		return false

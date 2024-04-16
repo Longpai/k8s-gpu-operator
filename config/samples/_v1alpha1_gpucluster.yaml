@@ -4,9 +4,10 @@ metadata:
   name: gpucluster-sample
 spec:
   daemonSets: {}
+  operator: {}
   devicePlugin:
+    enabled: false
+  kubevirtDevicePlugin:
     enabled: true
-    repository: hub.xdxct.com/xdxct-docker
-    image: k8s-device-plugin
-    version: devel
+  
 

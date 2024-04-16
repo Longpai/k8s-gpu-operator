@@ -180,6 +180,13 @@ spec:
                     description: Xdxct Device-plugin image tag
                     type: string
                 type: object
+              kubevirtDevicePlugin:
+                description: kubevirt device plugin component spec
+                properties:
+                  enabled:
+                    description: Enabled indicates whether to deploy kubevirt-device-plugin
+                    type: boolean
+                type: object
               operator:
                 description: Operator defines configurations for cluster
                 properties:
@@ -189,6 +196,7 @@ spec:
             required:
             - daemonSets
             - devicePlugin
+            - kubevirtDevicePlugin
             - operator
             type: object
           status:
