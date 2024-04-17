@@ -40,10 +40,11 @@ type GPUClusterReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=xdxct.com,resources=gpuclusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=xdxct.com,resources=gpuclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=xdxct.com,resources=gpuclusters/finalizers,verbs=update
-//+kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=xdxct.com,resources=gpuclusters,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=xdxct.com,resources=gpuclusters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=xdxct.com,resources=gpuclusters/finalizers,verbs=update
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=*
+// +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

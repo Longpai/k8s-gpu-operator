@@ -193,6 +193,30 @@ type DevicePluginConfig struct {
 type KubevirtDevicePluginSpec struct {
 	// Enabled indicates whether to deploy kubevirt-device-plugin
 	Enabled *bool `json:"enabled,omitempty"`
+
+	// Xdxct kubevirt-device-plugin image repository
+	Repository string `json:"repository,omitempty"`
+
+	// Xdxct kubevirt-device-plugin image name
+	Image string `json:"image,omitempty"`
+
+	// Xdxct kubevirt-device-plugin image tag
+	Version string `json:"version,omitempty"`
+
+	// Xdxct kubevirt-device-plugin image Pull Policy
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+
+	// Xdxct kubevirt-device-plugin image Pull Secrets
+	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
+
+	// Optional: List of arguments
+	Args []string `json:"args,omitempty"`
+
+	// Optional: List of environmemt variables
+	Env []EnvVar `json:"env,omitempty"`
+
+	// Optional: resources requests and limits for xdxct kubevirt-device-plugin pod
+	Resources *ResourceRequirements `json:"resources,omitempty"`
 }
 
 func init() {
@@ -230,6 +254,9 @@ func ImagePath(spec interface{}) (string, error) {
 	case *DevicePluginSpec:
 		config := spec.(*DevicePluginSpec)
 		return imagePath(config.Repository, config.Image, config.Version, "DEVICE_PLUGIN_IMAGE")
+	case *KubevirtDevicePluginSpec:
+		config := spec.(*KubevirtDevicePluginSpec)
+		return imagePath(config.Repository, config.Image, config.Version, "KUBEVIRT_DEVICE_PLUGIN_IMAGE")
 	default:
 		return "", fmt.Errorf("invalid type to construct image type path: %v", v)
 	}

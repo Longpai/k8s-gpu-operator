@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels: 
+    app: xdxct-kubevirt-device-plugin-ds
+  name: xdxct-kubevirt-device-plugin-ds
+spec:
+  selector:
+    matchLabels:
+      app: xdxct-kubevirt-device-plugin-ds
+  template:
+    metadata:
+      labels:
+        app: xdxct-kubevirt-device-plugin-ds
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: xdxct-kubevirt-device-plugin
+      tolerations:
+      # Allow this pod to be rescheduled while the node is in "critical add-ons only" mode.
+      # This, along with the annotation above marks this pod as a critical add-on.
+      - key: CriticalAddonsOnly
+        operator: Exists
+      containers:
+      - name: xdxct-kubevirt-gpu-device-plugin-ctr
+        imagePullPolicy: IfNotPresent
+        image: "Filled By Configuration"
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - name: device-plugin
+            mountPath: /var/lib/kubelet/device-plugins
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/device-plugins

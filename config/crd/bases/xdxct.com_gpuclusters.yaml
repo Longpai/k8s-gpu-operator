@@ -183,9 +183,71 @@ spec:
               kubevirtDevicePlugin:
                 description: kubevirt device plugin component spec
                 properties:
+                  args:
+                    description: 'Optional: List of arguments'
+                    items:
+                      type: string
+                    type: array
                   enabled:
                     description: Enabled indicates whether to deploy kubevirt-device-plugin
                     type: boolean
+                  env:
+                    description: 'Optional: List of environmemt variables'
+                    items:
+                      properties:
+                        name:
+                          description: Environment name
+                          type: string
+                        value:
+                          description: Environment value
+                          type: string
+                      required:
+                      - name
+                      - value
+                      type: object
+                    type: array
+                  image:
+                    description: Xdxct kubevirt-device-plugin image name
+                    type: string
+                  imagePullPolicy:
+                    description: Xdxct kubevirt-device-plugin image Pull Policy
+                    type: string
+                  imagePullSecrets:
+                    description: Xdxct kubevirt-device-plugin image Pull Secrets
+                    items:
+                      type: string
+                    type: array
+                  repository:
+                    description: Xdxct kubevirt-device-plugin image repository
+                    type: string
+                  resources:
+                    description: 'Optional: resources requests and limits for xdxct
+                      kubevirt-device-plugin pod'
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maxium amount of compute
+                          resource requirements More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources requirements More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                  version:
+                    description: Xdxct kubevirt-device-plugin image tag
+                    type: string
                 type: object
               operator:
                 description: Operator defines configurations for cluster

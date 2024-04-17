@@ -9,5 +9,7 @@ spec:
     enabled: false
   kubevirtDevicePlugin:
     enabled: true
-  
-
+    repository: hub.xdxct.com/kubevirt 
+    image: kubevirt-device-plugin
+    version: devel
+    #args: []

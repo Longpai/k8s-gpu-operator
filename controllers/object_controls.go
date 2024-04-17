@@ -68,13 +68,14 @@ func ServiceAccount(c GPUClusterController) (gpuv1alpha1.State, error) {
 
 // create Role resource
 func Role(c GPUClusterController) (gpuv1alpha1.State, error) {
-	roleObj := c.resources[0].Role.DeepCopy()
+	index := c.index
+	roleObj := c.resources[index].Role.DeepCopy()
 	roleObj.Namespace = c.namespace
 
 	fmt.Println("Role:", roleObj.Name)
 
 	// 组件被disabled时，清理掉已经存在资源
-	if !c.isStateEnabled(c.componentNames[0]) {
+	if !c.isStateEnabled(c.componentNames[index]) {
 		err := c.client.Delete(c.ctx, roleObj)
 		if err != nil && !apierrors.IsNotFound(err) {
 			fmt.Printf("Failed to delete role: %v", err)
@@ -106,13 +107,14 @@ func Role(c GPUClusterController) (gpuv1alpha1.State, error) {
 
 // create clusterRole resource
 func ClusterRole(c GPUClusterController) (gpuv1alpha1.State, error) {
-	clusterRoleObj := c.resources[0].ClusterRole.DeepCopy()
+	index := c.index
+	clusterRoleObj := c.resources[index].ClusterRole.DeepCopy()
 	clusterRoleObj.Namespace = c.namespace
 
 	fmt.Println("clusterRole:", clusterRoleObj.Name)
 
 	// 组件被disabled时，清理掉已经存在资源
-	if !c.isStateEnabled(c.componentNames[0]) {
+	if !c.isStateEnabled(c.componentNames[index]) {
 		err := c.client.Delete(c.ctx, clusterRoleObj)
 		if err != nil && !apierrors.IsNotFound(err) {
 			fmt.Printf("Failed to delete clusterRole: %v", err)
@@ -144,13 +146,14 @@ func ClusterRole(c GPUClusterController) (gpuv1alpha1.State, error) {
 
 // create RoleBinding resource
 func RoleBinding(c GPUClusterController) (gpuv1alpha1.State, error) {
-	RoleBindingObj := c.resources[0].RoleBinding.DeepCopy()
+	index := c.index
+	RoleBindingObj := c.resources[index].RoleBinding.DeepCopy()
 	RoleBindingObj.Namespace = c.namespace
 
 	fmt.Println("RoleBinding:", RoleBindingObj.Name)
 
 	// 组件被disabled时，清理掉已经存在资源
-	if !c.isStateEnabled(c.componentNames[0]) {
+	if !c.isStateEnabled(c.componentNames[index]) {
 		err := c.client.Delete(c.ctx, RoleBindingObj)
 		if err != nil && !apierrors.IsNotFound(err) {
 			fmt.Printf("Failed to delete RoleBinding: %v", err)
@@ -182,13 +185,14 @@ func RoleBinding(c GPUClusterController) (gpuv1alpha1.State, error) {
 
 // create ClusterRoleBinding resource
 func ClusterRoleBinding(c GPUClusterController) (gpuv1alpha1.State, error) {
-	clusterRoleBindingObj := c.resources[0].ClusterRoleBinding.DeepCopy()
+	index := c.index
+	clusterRoleBindingObj := c.resources[index].ClusterRoleBinding.DeepCopy()
 	clusterRoleBindingObj.Namespace = c.namespace
 
 	fmt.Println("clusterRoleBindingObj:", clusterRoleBindingObj.Name)
 
 	// 组件被disabled时，清理掉已经存在资源
-	if !c.isStateEnabled(c.componentNames[0]) {
+	if !c.isStateEnabled(c.componentNames[index]) {
 		err := c.client.Delete(c.ctx, clusterRoleBindingObj)
 		if err != nil && !apierrors.IsNotFound(err) {
 			fmt.Printf("Failed to delete clusterRoleBinding: %v", err)
@@ -225,13 +229,14 @@ func ConfigMaps(c GPUClusterController) (gpuv1alpha1.State, error) {
 // create DaemonSet resource
 func DaemonSet(c GPUClusterController) (gpuv1alpha1.State, error) {
 	ctx := c.ctx
-	daemonSetObj := c.resources[0].Daemonset.DeepCopy()
+	index := c.index
+	daemonSetObj := c.resources[index].Daemonset.DeepCopy()
 	daemonSetObj.Namespace = c.namespace
 
 	fmt.Println("daemonSetObj:", daemonSetObj.Name)
 
 	// 组件被disabled时，清理掉已经存在资源
-	if !c.isStateEnabled(c.componentNames[0]) {
+	if !c.isStateEnabled(c.componentNames[index]) {
 		err := c.client.Delete(c.ctx, daemonSetObj)
 		if err != nil && !apierrors.IsNotFound(err) {
 			fmt.Printf("Failed to delete daemonSet: %v", err)
@@ -263,13 +268,12 @@ func DaemonSet(c GPUClusterController) (gpuv1alpha1.State, error) {
 	}
 	for key, value := range c.singleton.Spec.DaemonSets.Annotations {
 		daemonSetObj.Annotations[key] = value
-
 	}
 
 	foundDs := &appsv1.DaemonSet{}
 	err = c.client.Get(ctx, types.NamespacedName{
-		Namespace: foundDs.Namespace,
-		Name:      foundDs.Name,
+		Namespace: daemonSetObj.Namespace,
+		Name:      daemonSetObj.Name,
 	}, foundDs)
 	if err != nil && apierrors.IsNotFound(err) {
 		fmt.Println("DaemonSet not found:", daemonSetObj.Name, "Start Creating ...")
@@ -279,24 +283,35 @@ func DaemonSet(c GPUClusterController) (gpuv1alpha1.State, error) {
 		daemonSetObj.Annotations[XdxctAnnotationHashKey] = hashStr
 		err = c.client.Create(ctx, daemonSetObj)
 		if err != nil {
-			fmt.Printf("failed to create %s daemonSet: %v", daemonSetObj.Name, err)
+			fmt.Printf("failed to create %s: %v", daemonSetObj.Name, err)
 			return gpuv1alpha1.NotReady, err
 		}
+		fmt.Println("first")
 		return checkDaemonSetReady(daemonSetObj.Name, c), nil
 	} else if err != nil {
 		fmt.Printf("failed to get %s daemonSet: %v", daemonSetObj.Name, err)
 		return gpuv1alpha1.NotReady, err
 	}
 
-	// checkDaemonSetChanged(foundDs, daemonSetObj)
-	// checkDaemonSetChanged()
+	change := checkDaemonSetChanged(foundDs, daemonSetObj)
+	if change {
+		fmt.Println("DaemonSet is different, Updating name", daemonSetObj.Name)
+		err = c.client.Update(ctx, daemonSetObj)
+		if err != nil {
+			return gpuv1alpha1.NotReady, err
+		}
+	} else {
+		fmt.Println("DaemonSet not changed, Skipping updating", daemonSetObj.Name)
+	}
+
 	return checkDaemonSetReady(daemonSetObj.Name, c), nil
 }
 
 // pre-config for DaemonSet: fillful daemonset with configuration-info
 func preDeployDaemonSet(c GPUClusterController, daemonSetObj *appsv1.DaemonSet) error {
 	transformations := map[string]func(*appsv1.DaemonSet, *gpuv1alpha1.GPUClusterSpec, GPUClusterController) error{
-		"xdxct-device-plugin-daemonset": TransformDevicePlugin,
+		"xdxct-device-plugin-ds":          TransformDevicePlugin,
+		"xdxct-kubevirt-device-plugin-ds": TransformKubevirtDevicePlugin,
 	}
 	fs, ok := transformations[daemonSetObj.Name]
 	if !ok {
@@ -449,6 +464,52 @@ func setRuntimeClass(podSpec *corev1.PodSpec, runtime gpuv1alpha1.Runtime, runti
 	}
 }
 
+func TransformKubevirtDevicePlugin(daemonSet *appsv1.DaemonSet, config *gpuv1alpha1.GPUClusterSpec, c GPUClusterController) error {
+	// update image
+	image, err := gpuv1alpha1.ImagePath(&config.KubevirtDevicePlugin)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	daemonSet.Spec.Template.Spec.Containers[0].Image = image
+
+	// update image pull policy
+	daemonSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = gpuv1alpha1.ImagePullPolicy(config.KubevirtDevicePlugin.ImagePullPolicy)
+
+	// set pull secrets
+	if len(config.KubevirtDevicePlugin.ImagePullSecrets) > 0 {
+		for _, secret := range config.KubevirtDevicePlugin.ImagePullSecrets {
+			if !containSecret(daemonSet.Spec.Template.Spec.ImagePullSecrets, secret) {
+				daemonSet.Spec.Template.Spec.ImagePullSecrets = append(daemonSet.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{
+					Name: secret,
+				})
+			}
+		}
+	}
+
+	// set arguments if specified for device-plugin container
+	if len(config.KubevirtDevicePlugin.Args) > 0 {
+		daemonSet.Spec.Template.Spec.Containers[0].Args = config.KubevirtDevicePlugin.Args
+	}
+
+	// set environments if specified for device-plugin container
+	if len(config.KubevirtDevicePlugin.Env) > 0 {
+		for _, env := range config.KubevirtDevicePlugin.Env {
+			setContainerEnv(&daemonSet.Spec.Template.Spec.Containers[0], env.Name, env.Value)
+		}
+	}
+
+	// set resource limits
+	if config.KubevirtDevicePlugin.Resources != nil {
+		for i := range daemonSet.Spec.Template.Spec.Containers {
+			daemonSet.Spec.Template.Spec.Containers[i].Resources.Requests = config.KubevirtDevicePlugin.Resources.Requests
+			daemonSet.Spec.Template.Spec.Containers[i].Resources.Limits = config.KubevirtDevicePlugin.Resources.Limits
+		}
+	}
+
+	return nil
+}
+
 func applyCommonDaemonsetMetadata(daemonsetObj *appsv1.DaemonSet, configDsSpec *gpuv1alpha1.DaemonSetsSpec) {
 	if len(configDsSpec.Labels) > 0 {
 		if daemonsetObj.Spec.Template.ObjectMeta.Labels == nil {
@@ -488,20 +549,19 @@ func getDaemonSetHash(daemonSet *appsv1.DaemonSet) string {
 func checkDaemonSetReady(name string, c GPUClusterController) gpuv1alpha1.State {
 	ctx := c.ctx
 
-	fmt.Println("checking daemonSet for readiness:", name)
+	fmt.Println("checking daemonSet for readiness:", c.namespace, name)
 	ds := &appsv1.DaemonSet{}
 	err := c.client.Get(ctx, types.NamespacedName{
 		Namespace: c.namespace,
 		Name:      name,
 	}, ds)
 	if err != nil {
-		fmt.Printf("failed to get daemonset: %s", name)
+		fmt.Printf("failed to get daemonset: %s\n", name)
 		return gpuv1alpha1.NotReady
 	}
 
-	// 检查存在期望pod为0
-	if ds.Status.DesiredNumberScheduled == 0 {
-		fmt.Printf("DaemonSet has desired pods of 0: %s", name)
+	// 检查存在期望pod.?
+	if ds.Status.DesiredNumberScheduled == ds.Status.NumberReady {
 		return gpuv1alpha1.Ready
 	}
 	// 检查是否有不可用的pod
@@ -598,10 +658,25 @@ func getPodControllerRevisionHash(pod *corev1.Pod) (string, error) {
 	return "", fmt.Errorf("controller-revision-hash label not present for pod %s", pod.Name)
 }
 
-// func checkDaemonSetChanged(currentDs *appsv1.DaemonSet, newDs *appsv1.DaemonSet) bool {
-// 	if currentDs == nil || newDs == nil {
-// 		return true
-// 	}
-// 	fmt.Println(currentDs.Annotations)
-// 	return true
-// }
+func checkDaemonSetChanged(currentDs *appsv1.DaemonSet, newDs *appsv1.DaemonSet) bool {
+	if currentDs == nil && newDs != nil {
+		return true
+	}
+	// newDs: 确保已创建map[string]string,地址不能为空
+	if currentDs.Annotations == nil || newDs.Annotations == nil {
+		panic("appsv1.DaemonSet.Annotations must be allocated addresses")
+	}
+
+	hashStr := getDaemonSetHash(newDs)
+
+	for annotation, value := range currentDs.Annotations {
+		if XdxctAnnotationHashKey == annotation {
+			if value != hashStr {
+				newDs.Annotations[XdxctAnnotationHashKey] = hashStr
+				return true
+			}
+			break
+		}
+	}
+	return false
+}
