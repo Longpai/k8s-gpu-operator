@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: xdxct-vgpu-device-manager-ds
+  labels:
+    app: xdxct-vgpu-device-manager
+spec:
+  selector:
+    matchLabels:
+      app: xdxct-vgpu-device-manager
+  template:
+    metadata:
+      labels:
+        app: xdxct-vgpu-device-manager
+    spec:
+      serviceAccountName: xdxct-vgpu-device-manager
+      containers:
+      - name: xdxct-vgpu-device-manager
+        image: "Filled By Configuration"
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CONFIG_FILE
+          value: "/configfile/config-vgpu.yaml"
+        - name: DEFAULT_VGPU_CONFIG
+          value: "Filled By Configuration"
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /sys
+          name: container-sys
+        - mountPath: /configfile
+          name: configfile
+      volumes:
+      - name: configfile
+        configMap:
+          name: "Filled By Configuration"
+      - name: container-sys
+        hostPath:
+          path: /sys
+          type: Directory

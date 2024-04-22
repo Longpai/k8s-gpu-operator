@@ -26,6 +26,10 @@ const (
 	XdxctAnnotationHashKey = "xdxct.com/hasher"
 	// PodControllerRevisionHashLabelKey is the annotation key for pod controller revision hash value
 	PodControllerRevisionHashLabelKey = "controller-revision-hash"
+	// VgpuDeviceConfigMap indicates ConfigMap containing vGPU devices configuration
+	VGPUDeviceConfigMap = "vgpu-device-config"
+	// VGPUDeviceDefaultConfig indicates name of default configuration in the vGPU devices config file
+	VGPUDeviceDefaultConfig = "default"
 )
 
 type controlFunc []func(c GPUClusterController) (gpuv1alpha1.State, error)
@@ -95,6 +99,7 @@ func Role(c GPUClusterController) (gpuv1alpha1.State, error) {
 			err = c.client.Update(c.ctx, roleObj)
 			if err != nil {
 				fmt.Printf("Failed to Update: %v", err)
+				return gpuv1alpha1.NotReady, err
 			}
 			return gpuv1alpha1.Ready, nil
 		}
@@ -134,6 +139,7 @@ func ClusterRole(c GPUClusterController) (gpuv1alpha1.State, error) {
 			err = c.client.Update(c.ctx, clusterRoleObj)
 			if err != nil {
 				fmt.Printf("Failed to Update: %v", err)
+				return gpuv1alpha1.NotReady, err
 			}
 			return gpuv1alpha1.Ready, nil
 		}
@@ -173,6 +179,7 @@ func RoleBinding(c GPUClusterController) (gpuv1alpha1.State, error) {
 			err = c.client.Update(c.ctx, RoleBindingObj)
 			if err != nil {
 				fmt.Printf("Failed to Update: %v", err)
+				return gpuv1alpha1.NotReady, err
 			}
 			return gpuv1alpha1.Ready, nil
 		}
@@ -212,6 +219,7 @@ func ClusterRoleBinding(c GPUClusterController) (gpuv1alpha1.State, error) {
 			err = c.client.Update(c.ctx, clusterRoleBindingObj)
 			if err != nil {
 				fmt.Printf("Failed to Update: %v", err)
+				return gpuv1alpha1.NotReady, err
 			}
 			return gpuv1alpha1.Ready, nil
 		}
@@ -222,8 +230,63 @@ func ClusterRoleBinding(c GPUClusterController) (gpuv1alpha1.State, error) {
 	return gpuv1alpha1.Ready, nil
 }
 
-func ConfigMaps(c GPUClusterController) (gpuv1alpha1.State, error) {
+func createConfigMap(c GPUClusterController, cmIdx int) (gpuv1alpha1.State, error) {
+	index := c.index
+
+	config := c.singleton.Spec
+	cmObj := c.resources[index].ConfigMaps[cmIdx].DeepCopy()
+	cmObj.Namespace = c.namespace
+
+	fmt.Println("configMapObj:", cmObj.Name)
+
+	// 组件被disabled时，清理掉已经存在资源
+	if !c.isStateEnabled(c.componentNames[index]) {
+		err := c.client.Delete(c.ctx, cmObj)
+		if err != nil && !apierrors.IsNotFound(err) {
+			fmt.Printf("failed to delete configmap: %v", err)
+			return gpuv1alpha1.NotReady, err
+		}
+		return gpuv1alpha1.Disabled, err
+	}
+	// 如果存在自定义的vgpu配置文件, 便不会创建默认的vgpu configmap
+	if cmObj.Name == VGPUDeviceConfigMap {
+		if config.VGPUDeviceManager.Config != nil && config.VGPUDeviceManager.Config.Name != "" {
+			fmt.Printf("Not creating resource, custom ConfigMap provided: %s", config.VGPUDeviceManager.Config.Name)
+			return gpuv1alpha1.Ready, nil
+		}
+	}
+	// 将资源与控制器相关联
+	if err := controllerutil.SetControllerReference(c.singleton, cmObj, c.schema); err != nil {
+		return gpuv1alpha1.NotReady, err
+	}
+
+	if err := c.client.Create(c.ctx, cmObj); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			fmt.Println("Found Resource, Update")
+			err = c.client.Update(c.ctx, cmObj)
+			if err != nil {
+				fmt.Printf("Failed to Update: %v", err)
+				return gpuv1alpha1.NotReady, err
+			}
+		}
+	}
 	return gpuv1alpha1.Ready, nil
+}
+
+func ConfigMaps(c GPUClusterController) (gpuv1alpha1.State, error) {
+	status := gpuv1alpha1.Ready
+	index := c.index
+	for i := range c.resources[index].ConfigMaps {
+		isReady, err := createConfigMap(c, i)
+		if err != nil {
+			return isReady, err
+		}
+		if isReady != gpuv1alpha1.Ready {
+			status = gpuv1alpha1.NotReady
+		}
+	}
+
+	return status, nil
 }
 
 // create DaemonSet resource
@@ -286,7 +349,6 @@ func DaemonSet(c GPUClusterController) (gpuv1alpha1.State, error) {
 			fmt.Printf("failed to create %s: %v", daemonSetObj.Name, err)
 			return gpuv1alpha1.NotReady, err
 		}
-		fmt.Println("first")
 		return checkDaemonSetReady(daemonSetObj.Name, c), nil
 	} else if err != nil {
 		fmt.Printf("failed to get %s daemonSet: %v", daemonSetObj.Name, err)
@@ -312,6 +374,7 @@ func preDeployDaemonSet(c GPUClusterController, daemonSetObj *appsv1.DaemonSet) 
 	transformations := map[string]func(*appsv1.DaemonSet, *gpuv1alpha1.GPUClusterSpec, GPUClusterController) error{
 		"xdxct-device-plugin-ds":          TransformDevicePlugin,
 		"xdxct-kubevirt-device-plugin-ds": TransformKubevirtDevicePlugin,
+		"xdxct-vgpu-device-manager-ds":    TransformVGPUDeviceManager,
 	}
 	fs, ok := transformations[daemonSetObj.Name]
 	if !ok {
@@ -487,12 +550,12 @@ func TransformKubevirtDevicePlugin(daemonSet *appsv1.DaemonSet, config *gpuv1alp
 		}
 	}
 
-	// set arguments if specified for device-plugin container
+	// set arguments if specified for kubevirt-device-plugin container
 	if len(config.KubevirtDevicePlugin.Args) > 0 {
 		daemonSet.Spec.Template.Spec.Containers[0].Args = config.KubevirtDevicePlugin.Args
 	}
 
-	// set environments if specified for device-plugin container
+	// set environments if specified for kubevirt-device-plugin container
 	if len(config.KubevirtDevicePlugin.Env) > 0 {
 		for _, env := range config.KubevirtDevicePlugin.Env {
 			setContainerEnv(&daemonSet.Spec.Template.Spec.Containers[0], env.Name, env.Value)
@@ -506,6 +569,72 @@ func TransformKubevirtDevicePlugin(daemonSet *appsv1.DaemonSet, config *gpuv1alp
 			daemonSet.Spec.Template.Spec.Containers[i].Resources.Limits = config.KubevirtDevicePlugin.Resources.Limits
 		}
 	}
+
+	return nil
+}
+
+func TransformVGPUDeviceManager(daemonSet *appsv1.DaemonSet, config *gpuv1alpha1.GPUClusterSpec, c GPUClusterController) error {
+	// Update image
+	image, err := gpuv1alpha1.ImagePath(&config.VGPUDeviceManager)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	daemonSet.Spec.Template.Spec.Containers[0].Image = image
+
+	// Update image pull policy
+	daemonSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = gpuv1alpha1.ImagePullPolicy(config.VGPUDeviceManager.ImagePullPolicy)
+
+	// Set pull secrets
+	if len(config.VGPUDeviceManager.ImagePullSecrets) > 0 {
+		for _, secret := range config.VGPUDeviceManager.ImagePullSecrets {
+			if !containSecret(daemonSet.Spec.Template.Spec.ImagePullSecrets, secret) {
+				daemonSet.Spec.Template.Spec.ImagePullSecrets = append(daemonSet.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{
+					Name: secret,
+				})
+			}
+		}
+	}
+
+	// Set arguments if specified for vgpu-device-manager container
+	if len(config.VGPUDeviceManager.Args) > 0 {
+		daemonSet.Spec.Template.Spec.Containers[0].Args = config.VGPUDeviceManager.Args
+	}
+
+	// Set environments if specified for vgpu-device-manager container
+	if len(config.VGPUDeviceManager.Env) > 0 {
+		for _, env := range config.VGPUDeviceManager.Env {
+			setContainerEnv(&daemonSet.Spec.Template.Spec.Containers[0], env.Name, env.Value)
+		}
+	}
+
+	// Set resource limits
+	if config.VGPUDeviceManager.Resources != nil {
+		for i := range daemonSet.Spec.Template.Spec.Containers {
+			daemonSet.Spec.Template.Spec.Containers[i].Resources.Requests = config.VGPUDeviceManager.Resources.Requests
+			daemonSet.Spec.Template.Spec.Containers[i].Resources.Limits = config.VGPUDeviceManager.Resources.Limits
+		}
+	}
+
+	// Set configmap name for 'configfile' volume
+	for i, val := range daemonSet.Spec.Template.Spec.Volumes {
+		if !strings.Contains(val.Name, "configfile") {
+			continue
+		}
+		name := VGPUDeviceConfigMap
+		for config.VGPUDeviceManager.Config != nil && config.VGPUDeviceManager.Config.Name != "" {
+			name = config.VGPUDeviceManager.Config.Name
+		}
+		daemonSet.Spec.Template.Spec.Volumes[i].ConfigMap.Name = name
+		break
+	}
+
+	// Specify the type of vgpu
+	defaultConfig := VGPUDeviceDefaultConfig
+	if config.VGPUDeviceManager.Config != nil && config.VGPUDeviceManager.Config.Default != "" {
+		defaultConfig = config.VGPUDeviceManager.Config.Default
+	}
+	setContainerEnv(&daemonSet.Spec.Template.Spec.Containers[0], "DEFAULT_VGPU_CONFIG", defaultConfig)
 
 	return nil
 }

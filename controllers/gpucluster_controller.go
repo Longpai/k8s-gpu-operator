@@ -84,7 +84,7 @@ func (r *GPUClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// loop: deploy componentes
 	for {
 		// to remove
-		if gpuClusterCtrl.index == 2 {
+		if gpuClusterCtrl.index == 3 {
 			break
 		}
 		status, err := gpuClusterCtrl.step()

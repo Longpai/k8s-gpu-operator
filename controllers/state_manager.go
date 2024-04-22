@@ -11,6 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// singleton: cr用户配置的示例副本
+// resources: services中的资源配置
 // controlFunc: 保存了组件的执行函数
 // controls: 保存各个组件
 type GPUClusterController struct {
@@ -55,6 +57,7 @@ func (c *GPUClusterController) init(ctx context.Context, reconciler *GPUClusterR
 
 		addState(c, "/opt/k8s-gpu-operator/device-plugin")
 		addState(c, "/opt/k8s-gpu-operator/kubevirt-device-plugin")
+		addState(c, "/opt/k8s-gpu-operator/vgpu-device-manager")
 	}
 
 	return nil
@@ -85,6 +88,8 @@ func (c *GPUClusterController) isStateEnabled(name string) bool {
 		return GPUClusterSpec.DevicePlugin.IsEnabled()
 	case "kubevirt-device-plugin":
 		return GPUClusterSpec.KubevirtDevicePlugin.IsEnabled()
+	case "vgpu-device-manager":
+		return GPUClusterSpec.VGPUDeviceManager.IsEnabled()
 	default:
 		fmt.Println("invalid component name")
 		return false

@@ -114,6 +114,7 @@ func addRescourcesControls(path string) (Resouces, controlFunc) {
 				panic(err)
 			}
 			res.ConfigMaps = append(res.ConfigMaps, cm)
+			// 当且仅当存在configmap文件时, 才会添加Configmaps 函数
 			if len(res.ConfigMaps) == 1 {
 				ctrl = append(ctrl, ConfigMaps)
 			}

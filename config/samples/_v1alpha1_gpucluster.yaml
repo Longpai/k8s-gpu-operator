@@ -12,4 +12,10 @@ spec:
     repository: hub.xdxct.com/kubevirt 
     image: kubevirt-device-plugin
     version: devel
-    #args: []
+  vgpuDeviceManager:
+    enabled: true
+    repository: hub.xdxct.com/kubevirt 
+    image: xdxct-vgpu-device-manager
+    version: devel
+    config:
+      default: PANGU-A0-1G-1-CORE

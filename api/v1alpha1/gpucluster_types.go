@@ -68,8 +68,11 @@ type GPUClusterSpec struct {
 	// DevicePlugin component spec
 	DevicePlugin DevicePluginSpec `json:"devicePlugin"`
 
-	// kubevirt device plugin component spec
-	KubevirtDevicePlugin KubevirtDevicePluginSpec `json:"kubevirtDevicePlugin"`
+	// Kubevirt device plugin component spec
+	KubevirtDevicePlugin KubevirtDevicePluginSpec `json:"kubevirtDevicePlugin,omitempty"`
+
+	// VGPUDeviceManager component spec
+	VGPUDeviceManager VGPUDeviceManagerSpec `json:"vgpuDeviceManager,omitempty"`
 }
 
 // GPUClusterStatus defines the observed state of GPUCluster
@@ -219,6 +222,46 @@ type KubevirtDevicePluginSpec struct {
 	Resources *ResourceRequirements `json:"resources,omitempty"`
 }
 
+type VGPUDeviceManagerSpec struct {
+	// Enabled indicates whether to deploy vgpu-device-manager
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Xdxct vgpu-device-manager image repository
+	Repository string `json:"repository,omitempty"`
+
+	// Xdxct vgpu-device-manager image name
+	Image string `json:"image,omitempty"`
+
+	// Xdxct vgpu-device-manager image tag
+	Version string `json:"version,omitempty"`
+
+	// Xdxct vgpu-device-manager image Pull Policy
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+
+	// Xdxct vgpu-device-manager image Pull Secrets
+	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
+
+	// Optional: List of arguments
+	Args []string `json:"args,omitempty"`
+
+	// Optional: List of environmemt variables
+	Env []EnvVar `json:"env,omitempty"`
+
+	// Optional: resources requests and limits for xdxct kubevirt-device-plugin pod
+	Resources *ResourceRequirements `json:"resources,omitempty"`
+
+	// Xdxct vgpu-device-manager configuration for vGPU Device type
+	Config *VGPUDeviceManagerConfigSpec `json:"config,omitempty"`
+}
+
+type VGPUDeviceManagerConfigSpec struct {
+	// the name of configmap for vgpu-device-config
+	Name string `json:"name,omitempty"`
+
+	// config for vgpu devices
+	Default string `json:"default,omitempty"`
+}
+
 func init() {
 	SchemeBuilder.Register(&GPUCluster{}, &GPUClusterList{})
 }
@@ -257,6 +300,9 @@ func ImagePath(spec interface{}) (string, error) {
 	case *KubevirtDevicePluginSpec:
 		config := spec.(*KubevirtDevicePluginSpec)
 		return imagePath(config.Repository, config.Image, config.Version, "KUBEVIRT_DEVICE_PLUGIN_IMAGE")
+	case *VGPUDeviceManagerSpec:
+		config := spec.(*VGPUDeviceManagerSpec)
+		return imagePath(config.Repository, config.Image, config.Version, "VGPU_DEVICE_MANAGER")
 	default:
 		return "", fmt.Errorf("invalid type to construct image type path: %v", v)
 	}
@@ -282,11 +328,11 @@ func (c *GPUCluster) SetStatus(s State, ns string) {
 	c.Status.Namespace = ns
 }
 
-func (p *DevicePluginSpec) IsEnabled() bool {
-	if p.Enabled == nil {
+func (d *DevicePluginSpec) IsEnabled() bool {
+	if d.Enabled == nil {
 		return true
 	}
-	return *p.Enabled
+	return *d.Enabled
 }
 
 func (k *KubevirtDevicePluginSpec) IsEnabled() bool {
@@ -294,4 +340,11 @@ func (k *KubevirtDevicePluginSpec) IsEnabled() bool {
 		return true
 	}
 	return *k.Enabled
+}
+
+func (v *VGPUDeviceManagerSpec) IsEnabled() bool {
+	if v.Enabled == nil {
+		return true
+	}
+	return *v.Enabled
 }
