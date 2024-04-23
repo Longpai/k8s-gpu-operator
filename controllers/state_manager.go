@@ -55,10 +55,10 @@ func (c *GPUClusterController) init(ctx context.Context, reconciler *GPUClusterR
 			os.Exit(1)
 		}
 
-		addState(c, "/opt/k8s-gpu-operator/device-plugin")
-		addState(c, "/opt/k8s-gpu-operator/kubevirt-device-plugin")
+		// addState(c, "/opt/k8s-gpu-operator/device-plugin")
 		addState(c, "/opt/k8s-gpu-operator/vgpu-device-manager")
 		addState(c, "/opt/k8s-gpu-operator/vfio-device-manager")
+		addState(c, "/opt/k8s-gpu-operator/kubevirt-device-plugin")
 	}
 
 	return nil

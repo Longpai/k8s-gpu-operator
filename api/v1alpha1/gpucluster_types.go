@@ -334,7 +334,10 @@ func ImagePath(spec interface{}) (string, error) {
 		return imagePath(config.Repository, config.Image, config.Version, "KUBEVIRT_DEVICE_PLUGIN_IMAGE")
 	case *VGPUDeviceManagerSpec:
 		config := spec.(*VGPUDeviceManagerSpec)
-		return imagePath(config.Repository, config.Image, config.Version, "VGPU_DEVICE_MANAGER")
+		return imagePath(config.Repository, config.Image, config.Version, "VGPU_DEVICE_MANAGER_IMAGE")
+	case *VFIOManagerSpec:
+		config := spec.(*VFIOManagerSpec)
+		return imagePath(config.Repository, config.Image, config.Version, "VFIO_MANAGER_IMAGE")
 	default:
 		return "", fmt.Errorf("invalid type to construct image type path: %v", v)
 	}

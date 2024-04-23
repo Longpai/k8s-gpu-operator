@@ -6,11 +6,14 @@ spec:
   daemonSets: {}
   operator: {}
   vfioManager:
-    enabled: false
+    enabled: true
+    repository: hub.xdxct.com/xdxct-docker
+    image: vfio-manager
+    version: v0.1.0
   devicePlugin:
     enabled: false
-  kubevirtDevicePlugin:
-    enabled: false
+  kubevirtDevicePlugin
+    enabled: true
     repository: hub.xdxct.com/kubevirt 
     image: kubevirt-device-plugin
     version: devel

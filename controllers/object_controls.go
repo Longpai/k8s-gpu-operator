@@ -373,6 +373,7 @@ func preDeployDaemonSet(c GPUClusterController, daemonSetObj *appsv1.DaemonSet) 
 		"xdxct-device-plugin-ds":          TransformDevicePlugin,
 		"xdxct-kubevirt-device-plugin-ds": TransformKubevirtDevicePlugin,
 		"xdxct-vgpu-device-manager-ds":    TransformVGPUDeviceManager,
+		"xdxct-vfio-manager-ds":           TransformVfioDeviceManager,
 	}
 	fs, ok := transformations[daemonSetObj.Name]
 	if !ok {
@@ -632,6 +633,52 @@ func TransformVGPUDeviceManager(daemonSet *appsv1.DaemonSet, config *gpuv1alpha1
 		defaultConfig = config.VGPUDeviceManager.Config.Default
 	}
 	setContainerEnv(&daemonSet.Spec.Template.Spec.Containers[0], "DEFAULT_VGPU_CONFIG", defaultConfig)
+
+	return nil
+}
+
+func TransformVfioDeviceManager(daemonSet *appsv1.DaemonSet, config *gpuv1alpha1.GPUClusterSpec, c GPUClusterController) error {
+	// Update image
+	image, err := gpuv1alpha1.ImagePath(&config.VFIOManager)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	daemonSet.Spec.Template.Spec.Containers[0].Image = image
+
+	// Update image pull policy
+	daemonSet.Spec.Template.Spec.Containers[0].ImagePullPolicy = gpuv1alpha1.ImagePullPolicy(config.VFIOManager.ImagePullPolicy)
+
+	// Set pull secrets
+	if len(config.VFIOManager.ImagePullSecrets) > 0 {
+		for _, secret := range config.VFIOManager.ImagePullSecrets {
+			if !containSecret(daemonSet.Spec.Template.Spec.ImagePullSecrets, secret) {
+				daemonSet.Spec.Template.Spec.ImagePullSecrets = append(daemonSet.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{
+					Name: secret,
+				})
+			}
+		}
+	}
+
+	// Set arguments if specified for vgpu-device-manager container
+	if len(config.VFIOManager.Args) > 0 {
+		daemonSet.Spec.Template.Spec.Containers[0].Args = config.VFIOManager.Args
+	}
+
+	// Set environments if specified for vgpu-device-manager container
+	if len(config.VFIOManager.Env) > 0 {
+		for _, env := range config.VFIOManager.Env {
+			setContainerEnv(&daemonSet.Spec.Template.Spec.Containers[0], env.Name, env.Value)
+		}
+	}
+
+	// Set resource limits
+	if config.VFIOManager.Resources != nil {
+		for i := range daemonSet.Spec.Template.Spec.Containers {
+			daemonSet.Spec.Template.Spec.Containers[i].Resources.Requests = config.VFIOManager.Resources.Requests
+			daemonSet.Spec.Template.Spec.Containers[i].Resources.Limits = config.VFIOManager.Resources.Limits
+		}
+	}
 
 	return nil
 }

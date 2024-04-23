@@ -85,7 +85,7 @@ func (r *GPUClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	for {
 		fmt.Println("<---------------->")
 		// to remove
-		if gpuClusterCtrl.index == 4 {
+		if gpuClusterCtrl.index == 3 {
 			break
 		}
 		status, err := gpuClusterCtrl.step()

@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: xdxdct-vfio-manager-ds
+  name: xdxct-vfio-manager-ds
   labels:
-    app: xdxct-vfio-manager
+    app: xdxct-vfio-manager-ds
 spec:
   selector:
     matchLabels:
-      name: xdxct-vfio-manager
+      app: xdxct-vfio-manager-ds
   template:
     metadata:
       labels:
-        name: xdxct-vfio-manager
+        app: xdxct-vfio-manager-ds
     spec:
       priorityClassName: system-node-critical
       serviceAccountName: xdxct-vfio-manager
