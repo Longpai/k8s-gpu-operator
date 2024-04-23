@@ -58,6 +58,7 @@ func (c *GPUClusterController) init(ctx context.Context, reconciler *GPUClusterR
 		addState(c, "/opt/k8s-gpu-operator/device-plugin")
 		addState(c, "/opt/k8s-gpu-operator/kubevirt-device-plugin")
 		addState(c, "/opt/k8s-gpu-operator/vgpu-device-manager")
+		addState(c, "/opt/k8s-gpu-operator/vfio-device-manager")
 	}
 
 	return nil
@@ -90,6 +91,8 @@ func (c *GPUClusterController) isStateEnabled(name string) bool {
 		return GPUClusterSpec.KubevirtDevicePlugin.IsEnabled()
 	case "vgpu-device-manager":
 		return GPUClusterSpec.VGPUDeviceManager.IsEnabled()
+	case "vfio-device-manager":
+		return GPUClusterSpec.VFIOManager.IsEnabled()
 	default:
 		fmt.Println("invalid component name")
 		return false

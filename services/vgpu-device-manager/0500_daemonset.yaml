@@ -3,15 +3,15 @@ kind: DaemonSet
 metadata:
   name: xdxct-vgpu-device-manager-ds
   labels:
-    app: xdxct-vgpu-device-manager
+    app: xdxct-vgpu-device-manager-ds
 spec:
   selector:
     matchLabels:
-      app: xdxct-vgpu-device-manager
+      app: xdxct-vgpu-device-manager-ds
   template:
     metadata:
       labels:
-        app: xdxct-vgpu-device-manager
+        app: xdxct-vgpu-device-manager-ds
     spec:
       serviceAccountName: xdxct-vgpu-device-manager
       containers:
@@ -27,9 +27,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: CONFIG_FILE
+        - name: CONFIGFILE
           value: "/configfile/config-vgpu.yaml"
-        - name: DEFAULT_VGPU_CONFIG
+        - name: DEFAULTVGPUCONFIG
           value: "Filled By Configuration"
         securityContext:
           privileged: true
@@ -41,7 +41,7 @@ spec:
       volumes:
       - name: configfile
         configMap:
-          name: "Filled By Configuration"
+          name: vgpu-device-config
       - name: container-sys
         hostPath:
           path: /sys

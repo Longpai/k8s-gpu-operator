@@ -5,15 +5,17 @@ metadata:
 spec:
   daemonSets: {}
   operator: {}
+  vfioManager:
+    enabled: false
   devicePlugin:
     enabled: false
   kubevirtDevicePlugin:
-    enabled: true
+    enabled: false
     repository: hub.xdxct.com/kubevirt 
     image: kubevirt-device-plugin
     version: devel
   vgpuDeviceManager:
-    enabled: true
+    enabled: false
     repository: hub.xdxct.com/kubevirt 
     image: xdxct-vgpu-device-manager
     version: devel

@@ -41,7 +41,6 @@ func ServiceAccount(c GPUClusterController) (gpuv1alpha1.State, error) {
 	saObj.Namespace = c.namespace
 
 	fmt.Println("ServiceAccount:", saObj.Name)
-
 	// 组件被disabled时，清理掉已经存在资源
 	if !c.isStateEnabled(c.componentNames[index]) {
 		err := c.client.Delete(c.ctx, saObj)
@@ -246,7 +245,7 @@ func createConfigMap(c GPUClusterController, cmIdx int) (gpuv1alpha1.State, erro
 			fmt.Printf("failed to delete configmap: %v", err)
 			return gpuv1alpha1.NotReady, err
 		}
-		return gpuv1alpha1.Disabled, err
+		return gpuv1alpha1.Disabled, nil
 	}
 	// 如果存在自定义的vgpu配置文件, 便不会创建默认的vgpu configmap
 	if cmObj.Name == VGPUDeviceConfigMap {
@@ -277,15 +276,15 @@ func ConfigMaps(c GPUClusterController) (gpuv1alpha1.State, error) {
 	status := gpuv1alpha1.Ready
 	index := c.index
 	for i := range c.resources[index].ConfigMaps {
-		isReady, err := createConfigMap(c, i)
+		stat, err := createConfigMap(c, i)
 		if err != nil {
-			return isReady, err
+			return stat, err
 		}
-		if isReady != gpuv1alpha1.Ready {
+
+		if status != gpuv1alpha1.Ready {
 			status = gpuv1alpha1.NotReady
 		}
 	}
-
 	return status, nil
 }
 
@@ -365,7 +364,6 @@ func DaemonSet(c GPUClusterController) (gpuv1alpha1.State, error) {
 	} else {
 		fmt.Println("DaemonSet not changed, Skipping updating", daemonSetObj.Name)
 	}
-
 	return checkDaemonSetReady(daemonSetObj.Name, c), nil
 }
 
@@ -615,7 +613,6 @@ func TransformVGPUDeviceManager(daemonSet *appsv1.DaemonSet, config *gpuv1alpha1
 			daemonSet.Spec.Template.Spec.Containers[i].Resources.Limits = config.VGPUDeviceManager.Resources.Limits
 		}
 	}
-
 	// Set configmap name for 'configfile' volume
 	for i, val := range daemonSet.Spec.Template.Spec.Volumes {
 		if !strings.Contains(val.Name, "configfile") {
@@ -685,7 +682,7 @@ func checkDaemonSetReady(name string, c GPUClusterController) gpuv1alpha1.State 
 		Name:      name,
 	}, ds)
 	if err != nil {
-		fmt.Printf("failed to get daemonset: %s\n", name)
+		fmt.Printf("failed to get daemonset: %s, error: %v\n", name, err)
 		return gpuv1alpha1.NotReady
 	}
 
@@ -695,7 +692,6 @@ func checkDaemonSetReady(name string, c GPUClusterController) gpuv1alpha1.State 
 	}
 	// 检查是否有不可用的pod
 	if ds.Status.NumberUnavailable != 0 {
-		fmt.Printf("DaemonSet not ready: %s", name)
 		return gpuv1alpha1.NotReady
 	}
 

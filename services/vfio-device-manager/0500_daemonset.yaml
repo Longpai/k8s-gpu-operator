@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: xdxdct-vfio-manager-ds
+  labels:
+    app: xdxct-vfio-manager
+spec:
+  selector:
+    matchLabels:
+      name: xdxct-vfio-manager
+  template:
+    metadata:
+      labels:
+        name: xdxct-vfio-manager
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: xdxct-vfio-manager
+      containers:
+        - name: container-vfio-manager
+          image: "Filled By Configuration"
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash","-c"]
+          args:
+            - /bin/vfio-manager.sh bind --all && sleep inf
+          resources:
+            limits:
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 200Mi
+          volumeMounts:
+          - name: xdxct-vfio-manager
+            readOnly: true
+            mountPath: /bin/vfio-manager.sh
+            subPath: vfio-manager.sh
+          - name: host-root
+            mountPath: /container
+          - name: host-sys
+            mountPath: /sys
+          securityContext:
+            privileged: true
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/bash", "-c", "/bin/vfio-manager.sh unbind --all"]
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: xdxct-vfio-manager
+          configMap:
+            name: xdxct-vfio-manager-cm
+            defaultMode: 448
+        - name: host-sys
+          hostPath:
+            path: /sys
+            type: Directory
+        - name: host-root
+          hostPath:
+            path: /

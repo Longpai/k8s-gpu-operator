@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: xdxct-vfio-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: xdxct-vfio-manager
+subjects:
+- kind: ServiceAccount
+  name: xdxct-vfio-manager
+  namespace: "default"

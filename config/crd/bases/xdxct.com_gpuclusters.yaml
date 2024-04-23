@@ -255,6 +255,75 @@ spec:
                   runtimeClass:
                     type: string
                 type: object
+              vfioManager:
+                description: VFIOManager for configuration to deploy vfio-pci manager
+                properties:
+                  args:
+                    description: 'Optional: List of arguments'
+                    items:
+                      type: string
+                    type: array
+                  enabled:
+                    description: Enabled indicates whether to deploy vfio-manager
+                    type: boolean
+                  env:
+                    description: 'Optional: List of environmemt variables'
+                    items:
+                      properties:
+                        name:
+                          description: Environment name
+                          type: string
+                        value:
+                          description: Environment value
+                          type: string
+                      required:
+                      - name
+                      - value
+                      type: object
+                    type: array
+                  image:
+                    description: Xdxct vfio-manager image name
+                    type: string
+                  imagePullPolicy:
+                    description: Xdxct vfio-manager image Pull Policy
+                    type: string
+                  imagePullSecrets:
+                    description: Xdxct vfio-manager image Pull Secrets
+                    items:
+                      type: string
+                    type: array
+                  repository:
+                    description: Xdxct vfio-manager image repository
+                    type: string
+                  resources:
+                    description: 'Optional: resources requests and limits for xdxct-vfio-manager
+                      pod'
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maxium amount of compute
+                          resource requirements More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources requirements More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                  version:
+                    description: Xdxct vfio-manager image tag
+                    type: string
+                type: object
               vgpuDeviceManager:
                 description: VGPUDeviceManager component spec
                 properties:

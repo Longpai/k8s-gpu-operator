@@ -73,6 +73,9 @@ type GPUClusterSpec struct {
 
 	// VGPUDeviceManager component spec
 	VGPUDeviceManager VGPUDeviceManagerSpec `json:"vgpuDeviceManager,omitempty"`
+
+	// VFIOManager for configuration to deploy vfio-pci manager
+	VFIOManager VFIOManagerSpec `json:"vfioManager,omitempty"`
 }
 
 // GPUClusterStatus defines the observed state of GPUCluster
@@ -262,6 +265,35 @@ type VGPUDeviceManagerConfigSpec struct {
 	Default string `json:"default,omitempty"`
 }
 
+type VFIOManagerSpec struct {
+	// Enabled indicates whether to deploy vfio-manager
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Xdxct vfio-manager image repository
+	Repository string `json:"repository,omitempty"`
+
+	// Xdxct vfio-manager image name
+	Image string `json:"image,omitempty"`
+
+	// Xdxct vfio-manager image tag
+	Version string `json:"version,omitempty"`
+
+	// Xdxct vfio-manager image Pull Policy
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+
+	// Xdxct vfio-manager image Pull Secrets
+	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
+
+	// Optional: List of arguments
+	Args []string `json:"args,omitempty"`
+
+	// Optional: List of environmemt variables
+	Env []EnvVar `json:"env,omitempty"`
+
+	// Optional: resources requests and limits for xdxct-vfio-manager pod
+	Resources *ResourceRequirements `json:"resources,omitempty"`
+}
+
 func init() {
 	SchemeBuilder.Register(&GPUCluster{}, &GPUClusterList{})
 }
@@ -347,4 +379,11 @@ func (v *VGPUDeviceManagerSpec) IsEnabled() bool {
 		return true
 	}
 	return *v.Enabled
+}
+
+func (vm *VFIOManagerSpec) IsEnabled() bool {
+	if vm.Enabled == nil {
+		return true
+	}
+	return *vm.Enabled
 }

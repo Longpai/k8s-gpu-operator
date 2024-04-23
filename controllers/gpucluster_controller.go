@@ -83,14 +83,15 @@ func (r *GPUClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// loop: deploy componentes
 	for {
+		fmt.Println("<---------------->")
 		// to remove
-		if gpuClusterCtrl.index == 3 {
+		if gpuClusterCtrl.index == 4 {
 			break
 		}
 		status, err := gpuClusterCtrl.step()
 		if err != nil {
 			return ctrl.Result{
-				RequeueAfter: time.Second * 5,
+				RequeueAfter: time.Second * 10,
 			}, nil
 		}
 		if status == gpuv1alpha1.NotReady {
