@@ -10,3 +10,4 @@ subjects:
 - kind: ServiceAccount
   name: xdxct-device-plugin
   namespace: default
+  # namespace: "FILLED BY THE OPERATOR"

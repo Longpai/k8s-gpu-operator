@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: get-nodes-pod
+  namespace: k8s-gpu-operator-system
+spec:
+  serviceAccountName: xdxct-vgpu-device-manager
+  containers:
+  - name: kubectl
+    image: kubectl
+    command: ["kubectl", "get", "nodes"]

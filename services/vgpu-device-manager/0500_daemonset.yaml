@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: xdxct-vgpu-device-manager-ds
+  # namespace: "FILLED BY THE OPERATOR"
+  # namespace: default
   labels:
     app: xdxct-vgpu-device-manager-ds
 spec:

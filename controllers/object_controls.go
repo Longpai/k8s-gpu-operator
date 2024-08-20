@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	// DefaultRuntimeClass represents "nvidia" RuntimeClass
+	// DefaultRuntimeClass represents "xdxct" RuntimeClass
 	DefaultRuntimeClass = "xdxct"
 	// XdxctAnnotationHashKey indicates annotation name for last applied hash by gpu-operator
 	XdxctAnnotationHashKey = "xdxct.com/hasher"
@@ -52,11 +52,12 @@ func ServiceAccount(c GPUClusterController) (gpuv1alpha1.State, error) {
 		return gpuv1alpha1.Disabled, nil
 	}
 
+	fmt.Println("ServiceAccount: ", saObj.Name, "Namespace: ", saObj.Namespace)
 	// 将资源与控制器相关联
 	if err := controllerutil.SetControllerReference(c.singleton, saObj, c.schema); err != nil {
+		fmt.Println("Error: ", err.Error())
 		return gpuv1alpha1.NotReady, err
 	}
-
 	if err := c.client.Create(c.ctx, saObj); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			fmt.Println("Found Resource, Skip update")
@@ -66,6 +67,7 @@ func ServiceAccount(c GPUClusterController) (gpuv1alpha1.State, error) {
 		fmt.Printf("Failed to Create: %v", err)
 		return gpuv1alpha1.NotReady, err
 	}
+	fmt.Println("ServiceAccount: ", saObj.Name, "Done")
 	return gpuv1alpha1.Ready, nil
 }
 
@@ -115,7 +117,7 @@ func ClusterRole(c GPUClusterController) (gpuv1alpha1.State, error) {
 	clusterRoleObj := c.resources[index].ClusterRole.DeepCopy()
 	clusterRoleObj.Namespace = c.namespace
 
-	fmt.Println("clusterRole:", clusterRoleObj.Name)
+	fmt.Println("clusterRole:", clusterRoleObj.Name, "Namespace", clusterRoleObj.Namespace)
 
 	// 组件被disabled时，清理掉已经存在资源
 	if !c.isStateEnabled(c.componentNames[index]) {
@@ -129,6 +131,7 @@ func ClusterRole(c GPUClusterController) (gpuv1alpha1.State, error) {
 
 	// 将资源与控制器相关联
 	if err := controllerutil.SetControllerReference(c.singleton, clusterRoleObj, c.schema); err != nil {
+		fmt.Println(err.Error())
 		return gpuv1alpha1.NotReady, err
 	}
 
@@ -269,6 +272,7 @@ func createConfigMap(c GPUClusterController, cmIdx int) (gpuv1alpha1.State, erro
 			}
 		}
 	}
+	fmt.Println("configMap Done")
 	return gpuv1alpha1.Ready, nil
 }
 
@@ -295,7 +299,7 @@ func DaemonSet(c GPUClusterController) (gpuv1alpha1.State, error) {
 	daemonSetObj := c.resources[index].Daemonset.DeepCopy()
 	daemonSetObj.Namespace = c.namespace
 
-	fmt.Println("daemonSetObj:", daemonSetObj.Name)
+	fmt.Println("daemonSetObj:", daemonSetObj.Name, "daemonSetNs:", daemonSetObj.Namespace)
 
 	// 组件被disabled时，清理掉已经存在资源
 	if !c.isStateEnabled(c.componentNames[index]) {
@@ -308,31 +312,31 @@ func DaemonSet(c GPUClusterController) (gpuv1alpha1.State, error) {
 	}
 
 	err := preDeployDaemonSet(c, daemonSetObj)
+	fmt.Println("predeploy done")
 	if err != nil {
 		fmt.Println("failed to pre-config for daemonSet:", err)
 		return gpuv1alpha1.NotReady, err
 	}
-
 	if err := controllerutil.SetControllerReference(c.singleton, daemonSetObj, c.schema); err != nil {
 		fmt.Println("filed to SetControllerReference", err)
 		return gpuv1alpha1.NotReady, err
 	}
-
+	fmt.Println("bind done")
 	if daemonSetObj.Labels == nil {
 		daemonSetObj.Labels = make(map[string]string)
 	}
 	for key, value := range c.singleton.Spec.DaemonSets.Labels {
 		daemonSetObj.Labels[key] = value
 	}
-
 	if daemonSetObj.Annotations == nil {
 		daemonSetObj.Annotations = make(map[string]string)
 	}
 	for key, value := range c.singleton.Spec.DaemonSets.Annotations {
 		daemonSetObj.Annotations[key] = value
 	}
-
+	fmt.Println("annot done")
 	foundDs := &appsv1.DaemonSet{}
+	fmt.Println("get done")
 	err = c.client.Get(ctx, types.NamespacedName{
 		Namespace: daemonSetObj.Namespace,
 		Name:      daemonSetObj.Name,
@@ -353,7 +357,7 @@ func DaemonSet(c GPUClusterController) (gpuv1alpha1.State, error) {
 		fmt.Printf("failed to get %s daemonSet: %v", daemonSetObj.Name, err)
 		return gpuv1alpha1.NotReady, err
 	}
-
+	fmt.Println("foundDSDone")
 	change := checkDaemonSetChanged(foundDs, daemonSetObj)
 	if change {
 		fmt.Println("DaemonSet is different, Updating name", daemonSetObj.Name)
@@ -722,16 +726,27 @@ func getDaemonSetHash(daemonSet *appsv1.DaemonSet) string {
 func checkDaemonSetReady(name string, c GPUClusterController) gpuv1alpha1.State {
 	ctx := c.ctx
 
+	// 这里看起来有点问题，应该是
 	fmt.Println("checking daemonSet for readiness:", c.namespace, name)
 	ds := &appsv1.DaemonSet{}
+	fmt.Println("Checking deamonSet in Namespace: ", c.namespace)
+
 	err := c.client.Get(ctx, types.NamespacedName{
 		Namespace: c.namespace,
 		Name:      name,
 	}, ds)
+
+	// err = c.client.Get(ctx, types.NamespacedName{
+	// 	Namespace: daemonSetObj.Namespace,
+	// 	Name:      daemonSetObj.Name,
+	// }, foundDs)
+
 	if err != nil {
 		fmt.Printf("failed to get daemonset: %s, error: %v\n", name, err)
 		return gpuv1alpha1.NotReady
 	}
+
+	fmt.Println("Success get ds")
 
 	// 检查存在期望pod.?
 	if ds.Status.DesiredNumberScheduled == ds.Status.NumberReady {

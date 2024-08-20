@@ -2,25 +2,21 @@ apiVersion: xdxct.com/v1alpha1
 kind: GPUCluster
 metadata:
   name: gpucluster-sample
+  # namespace: k8s-gpu-operator-system
 spec:
   daemonSets: {}
   operator: {}
-  vfioManager:
-    enabled: false
-    repository: hub.xdxct.com/xdxct-docker
-    image: vfio-manager
-    version: v0.1.0
   devicePlugin:
     enabled: false
-  kubevirtDevicePlugin:
-    enabled: true
-    repository: hub.xdxct.com/kubevirt 
-    image: kubevirt-device-plugin
-    version: devel
   vgpuDeviceManager:
     enabled: true
-    repository: hub.xdxct.com/kubevirt 
+    repository: hub.xdxct.com/kubevirt
     image: xdxct-vgpu-device-manager
     version: devel
     config:
       default: PANGU-A0-1G-1-CORE
+  kubevirtDevicePlugin:
+    enabled: true
+    repository: hub.xdxct.com/kubevirt
+    image: kubevirt-device-plugin
+    version: devel

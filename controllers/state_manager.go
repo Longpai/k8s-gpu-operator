@@ -46,6 +46,7 @@ func (c *GPUClusterController) init(ctx context.Context, reconciler *GPUClusterR
 	c.client = reconciler.Client
 	c.schema = reconciler.Scheme
 	c.singleton = gpuCluster
+	fmt.Println("Owner namespace: ", c.singleton.Namespace)
 	c.index = 0
 	if len(c.controls) == 0 {
 		gpuClusterCtrl.namespace = os.Getenv("OPERATOR_NAMESPACE")
@@ -55,6 +56,7 @@ func (c *GPUClusterController) init(ctx context.Context, reconciler *GPUClusterR
 			os.Exit(1)
 		}
 
+		fmt.Printf("env: %s Done\n", gpuClusterCtrl.namespace)
 		// addState(c, "/opt/k8s-gpu-operator/device-plugin")
 		addState(c, "/opt/k8s-gpu-operator/vgpu-device-manager")
 		addState(c, "/opt/k8s-gpu-operator/vfio-device-manager")
@@ -66,6 +68,7 @@ func (c *GPUClusterController) init(ctx context.Context, reconciler *GPUClusterR
 
 func (c *GPUClusterController) step() (gpuv1alpha1.State, error) {
 	result := gpuv1alpha1.Ready
+	// fmt.Println("c.index:", c.index)
 	for _, fs := range c.controls[c.index] {
 		stat, err := fs(*c)
 		if err != nil {
@@ -80,6 +83,10 @@ func (c *GPUClusterController) step() (gpuv1alpha1.State, error) {
 	// install the next component
 	c.index++
 	return result, nil
+}
+
+func (c GPUClusterController) last() bool {
+	return c.index == len(c.controls)
 }
 
 func (c *GPUClusterController) isStateEnabled(name string) bool {

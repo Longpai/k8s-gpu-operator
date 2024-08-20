@@ -44,7 +44,11 @@ type GPUClusterReconciler struct {
 // +kubebuilder:rbac:groups=xdxct.com,resources=gpuclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=xdxct.com,resources=gpuclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings;roles;rolebindings,verbs=*
+// +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;pods;pods/eviction;services;services/finalizers;endpoints,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=persistentvolumeclaims;events;configmaps;secrets;nodes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=controllerrevisions,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -57,8 +61,10 @@ type GPUClusterReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
 func (r *GPUClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
+	fmt.Println("req.namespaceName", req.NamespacedName)
 
 	gpuObjects := gpuv1alpha1.GPUCluster{}
+	fmt.Println("Preinit Namespace", gpuObjects.Namespace)
 	err := r.Client.Get(ctx, req.NamespacedName, &gpuObjects)
 	if err != nil {
 		err = fmt.Errorf("failed to get gpucluster object: %v", err)
@@ -84,10 +90,6 @@ func (r *GPUClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// loop: deploy componentes
 	for {
 		fmt.Println("<---------------->")
-		// to remove
-		if gpuClusterCtrl.index == 3 {
-			break
-		}
 		status, err := gpuClusterCtrl.step()
 		if err != nil {
 			return ctrl.Result{
@@ -96,8 +98,10 @@ func (r *GPUClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		if status == gpuv1alpha1.NotReady {
 			fmt.Println("Components Not Ready")
-		} else {
-			continue
+		}
+
+		if gpuClusterCtrl.last() {
+			break
 		}
 	}
 	return ctrl.Result{}, nil
