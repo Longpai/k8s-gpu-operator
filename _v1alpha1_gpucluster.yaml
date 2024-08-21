@@ -6,13 +6,18 @@ metadata:
 spec:
   daemonSets: {}
   operator: {}
+  vfioManager:
+    enabled: false
+    repository: hub.xdxct.com/xdxct-docker
+    image: vfio-manager
+    version: v0.1.0
   devicePlugin:
     enabled: false
   vgpuDeviceManager:
     enabled: true
     repository: hub.xdxct.com/kubevirt
     image: xdxct-vgpu-device-manager
-    version: devel
+    version: test
     config:
       default: PANGU-A0-1G-1-CORE
   kubevirtDevicePlugin:
